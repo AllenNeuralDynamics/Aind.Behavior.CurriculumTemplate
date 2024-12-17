@@ -18,6 +18,7 @@ dynamic = ["version"]
 
 dependencies = [
     "aind-behavior-services",
+    "click>=8.1.7",
 ]
 
 [project.urls]
@@ -33,7 +34,7 @@ dev = [
 ]
 
 [project.scripts]
-curriculum = "aind_behavior_curriculum_template:main"
+curriculum = "aind_behavior_curriculum_template.curriculum:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
