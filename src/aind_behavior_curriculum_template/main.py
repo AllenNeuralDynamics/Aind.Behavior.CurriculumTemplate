@@ -1,3 +1,4 @@
+from __future__ import annotations 
 import inspect
 import logging
 import os
@@ -12,9 +13,22 @@ from aind_behavior_curriculum_template import __version__ as aind_behavior_curri
 logger = logging.getLogger(__name__)
 
 
-def run_curriculum(args):
-    args = vars(args)
-    parsed = _RunCliArgs.from_dict(args)
+def run_curriculum(args: _RunCliArgs):
+    metric1 = len(str(args.data_directory)) / 10.0
+
+    from aind_behavior_curriculum_template.curriculum import trainer, s_stage_a, Policy, p_set_mode_from_metric1, TemplateMetrics
+
+    test_trainer_state = trainer.create_trainer_state(
+        stage=s_stage_a, is_on_curriculum=True, active_policies=tuple([Policy(rule=x) for x in [p_set_mode_from_metric1]])
+    )
+
+    test_metrics = TemplateMetrics(
+        metric1=metric1, metric2_history=[1.0, 2.0, 3.0]
+    )  # Changing metric1 will change the suggestion
+
+    suggestion = trainer.evaluate(test_trainer_state, test_metrics)
+    print(suggestion.model_dump_json(indent=2))
+    logging.info(suggestion.model_dump_json(indent=2))
 
 
 @click.group(name="aind-behavior-curriculum", short_help="AIND Behavior Curriculum CLI")
@@ -47,6 +61,7 @@ def version_aind_behavior_curriculum_template():
 )
 def run(data_directory: str | os.PathLike, skip_upload: bool, extras: str):
     parsed = _RunCliArgs(data_directory=Path(data_directory), skip_upload=skip_upload, extras=extras)
+    run_curriculum(parsed)
 
 
 main.add_command(version)
