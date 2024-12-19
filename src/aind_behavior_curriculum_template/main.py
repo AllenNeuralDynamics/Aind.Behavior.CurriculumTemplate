@@ -1,4 +1,5 @@
-from __future__ import annotations 
+from __future__ import annotations
+
 import inspect
 import logging
 import os
@@ -16,10 +17,18 @@ logger = logging.getLogger(__name__)
 def run_curriculum(args: _RunCliArgs):
     metric1 = len(str(args.data_directory)) / 10.0
 
-    from aind_behavior_curriculum_template.curriculum import trainer, s_stage_a, Policy, p_set_mode_from_metric1, TemplateMetrics
+    from aind_behavior_curriculum_template.curriculum import (
+        Policy,
+        TemplateMetrics,
+        p_set_mode_from_metric1,
+        s_stage_a,
+        trainer,
+    )
 
     test_trainer_state = trainer.create_trainer_state(
-        stage=s_stage_a, is_on_curriculum=True, active_policies=tuple([Policy(rule=x) for x in [p_set_mode_from_metric1]])
+        stage=s_stage_a,
+        is_on_curriculum=True,
+        active_policies=tuple([Policy(rule=x) for x in [p_set_mode_from_metric1]]),
     )
 
     test_metrics = TemplateMetrics(
