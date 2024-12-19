@@ -1,110 +1,89 @@
-import inspect
-import logging
-import os
-from dataclasses import dataclass, field
-from pathlib import Path
+from typing import Callable, Literal, TypeVar
 
-import click
-from aind_behavior_services import __version__ as aind_behavior_services_version
+# This curriculum only has 2 stages and a single transition from stage 1 to stage 2
+# The first stage has a single policy that update suggestions while stage 1 is active
+from aind_behavior_curriculum import Metrics, Policy, Stage, TaskParameters, Trainer, create_curriculum
+from pydantic import Field
 
-from aind_behavior_curriculum_template import __version__ as aind_behavior_curriculum_template_version
+from aind_behavior_curriculum_template import __version__
+from aind_behavior_curriculum_template.metrics import TemplateMetrics
+from aind_behavior_curriculum_template.task_logic import TemplateParameters, TemplateTaskLogic
 
-from . import __version__
-
-logger = logging.getLogger(__name__)
-
-
-def run_curriculum(args):
-    args = vars(args)
-    print(args)
-    parsed = _RunCliArgs.from_dict(args)
-    print(parsed)
+# ============================================================
+# I suggest the following naming convention to keep things clear:
+# - Policies should start with "p_" (e.g. p_identity_policy)
+# - Stage transitions should start with "st_" and should be named
+#   after the stages they transition between (e.g. st_stage1_to_stage2)
+# - Policy transitions should start with "pt_"
+# - Stages should start with "s_" (e.g. s_stage1)
+# ============================================================
 
 
-@click.group()
-def main():
-    pass
+# ============================================================
+# Policies to update task parameters based on metrics
+# ============================================================
+
+# Useful type hints for generic policies
+TMetrics = TypeVar("TMetrics", bound=Metrics)
+TTaskParameters = TypeVar("TTaskParameters", bound=TaskParameters)
+PolicyType = Callable[[TMetrics, TTaskParameters], TTaskParameters]  # This should generally work for type hinting
 
 
-@click.command(short_help="prints curriculum version")
-def version():
-    logger.info(__version__)
+def p_identity_policy(metrics: TMetrics, task_parameters: TTaskParameters) -> TTaskParameters:  # pylint: disable=W0613
+    """An identity policy that does nothing"""
+    return task_parameters
 
 
-@click.command(short_help="prints aind-behavior-services version")
-def version_aind_behavior_services():
-    logger.info(aind_behavior_services_version)
+def p_set_mode_from_metric1(metrics: TemplateMetrics, task_parameters: TemplateParameters) -> TemplateParameters:
+    if metrics.metric1 < 0:
+        task_parameters.mode = "foo"
+    elif 0 <= metrics.metric1 < 0.5:
+        task_parameters.mode = "bar"
+    else:
+        task_parameters.mode = "baz"
+
+    return task_parameters
 
 
-@click.command(short_help="prints aind-behavior-curriculum version")
-def version_aind_behavior_curriculum_template():
-    logger.info(aind_behavior_curriculum_template_version)
+# ============================================================
+# Stage transitions
+# ============================================================
+
+StageTransition = Callable[[TMetrics], bool]
 
 
-@click.command(
-    name="run",
-    short_help="runs the curriculum",
-    help="Run the curriculum application. A DATA-DIRECTORY input is required.",
-    no_args_is_help=True,
+def st_stage_a_to_stage_b(metrics: TemplateMetrics) -> bool:
+    return metrics.metric1 > 1
+
+
+# ============================================================
+# Curriculum definition
+# ============================================================
+
+
+class AnotherTask(TemplateTaskLogic):
+    name: Literal["AnotherTask"] = Field(default="AnotherTask")
+
+
+curriculum_class = create_curriculum("TemplateCurriculum", __version__, TemplateTaskLogic, AnotherTask)
+curriculum = curriculum_class()
+
+s_stage_a = Stage(
+    name="stage_a",
+    task=TemplateTaskLogic(task_parameters=TemplateParameters(mode="foo")),
+    start_policies=[Policy(rule=x) for x in [p_set_mode_from_metric1]],
 )
-@click.argument("data_directory")
-@click.option(
-    "--skip-upload", default=False, help="Update the suggestions at remote end-point", show_default=True, is_flag=True
+
+s_stage_b = Stage(
+    name="stage_b",
+    task=TemplateTaskLogic(task_parameters=TemplateParameters(mode="bar")),
 )
-@click.option(
-    "--extras", help="Extra arguments to be passed to the curriculum in the form of 'k1:v1, k2:v2'", default=""
-)
-def run(data_directory: str | os.PathLike, skip_upload: bool, extras: str):
-    parsed = _RunCliArgs(data_directory=Path(data_directory), skip_upload=skip_upload, extras=extras)
-    click.echo(parsed)
+
+curriculum.add_stage_transition(s_stage_a, s_stage_b, st_stage_a_to_stage_b)
 
 
-main.add_command(version)
-main.add_command(version_aind_behavior_services)
-main.add_command(version_aind_behavior_curriculum_template)
-main.add_command(run)
+# ==============================================================================
+# Create a Trainer that uses the curriculum to bootstrap suggestions
+# ==============================================================================
 
-
-@dataclass(frozen=True, slots=True)
-class _RunCliArgs:
-    data_directory: os.PathLike = field()
-    skip_upload: bool = False
-    extras: str | dict[str, str] = field(default_factory=dict)
-
-    def __post_init__(self):
-        if isinstance(self.extras, str):
-            object.__setattr__(self, "extras", self._parse_extra_args(self.extras))
-
-    @staticmethod
-    def _parse_extra_args(args: str) -> dict[str, str]:
-        extra_kwargs: dict[str, str] = {}
-        candidate_args = args.split(",")
-        if len(args) == 0:
-            return extra_kwargs
-        for arg in candidate_args:
-            try:
-                arg = arg.replace(" ", "")
-                key, value = arg.split(":")
-                extra_kwargs[key] = value
-            except ValueError as e:
-                logger.error("Invalid extra argument: %s. Parameters must be in the form of 'k1:v1, k2:v2'", arg)
-                raise e
-        return extra_kwargs
-
-    @classmethod
-    def from_dict(cls, env):
-        return cls(
-            **{
-                cls._sanitize_key(k): v
-                for k, v in env.items()
-                if cls._sanitize_key(k) in inspect.signature(cls).parameters
-            }
-        )
-
-    @staticmethod
-    def _sanitize_key(key: str) -> str:
-        return key.replace("-", "_")
-
-
-if __name__ == "__main__":
-    print("Running curriculum as main")
+trainer = Trainer(curriculum)
