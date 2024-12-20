@@ -73,7 +73,7 @@ def run(data_directory: str | os.PathLike, skip_upload: bool, extras: str):
 
 
 main.add_command(version)
-main.add_command(curriculum_version)
+main.add_command(abc_version)
 main.add_command(run)
 
 
