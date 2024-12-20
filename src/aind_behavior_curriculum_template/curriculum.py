@@ -65,7 +65,7 @@ class AnotherTask(TemplateTaskLogic):
     name: Literal["AnotherTask"] = Field(default="AnotherTask")
 
 
-curriculum_class = create_curriculum("TemplateCurriculum", __version__, TemplateTaskLogic, AnotherTask)
+curriculum_class = create_curriculum("TemplateCurriculum", __version__, (TemplateTaskLogic, AnotherTask))
 curriculum = curriculum_class()
 
 s_stage_a = Stage(
