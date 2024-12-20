@@ -8,7 +8,7 @@ resolution-markers = [
 [[package]]
 name = "aind-behavior-curriculum"
 version = "0.0.28"
-source = { git = "https://github.com/AllenNeuralDynamics/aind-behavior-curriculum#69f910d538693342685baf5111710b7d34ba9d8f" }
+source = { git = "https://github.com/AllenNeuralDynamics/aind-behavior-curriculum#6b5b32abe409ee8a2dcad66ead0b79f171198294" }
 dependencies = [
     { name = "boto3" },
     { name = "jinja2" },
