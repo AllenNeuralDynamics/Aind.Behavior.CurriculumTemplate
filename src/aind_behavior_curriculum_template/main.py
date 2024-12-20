@@ -7,9 +7,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import click
-from aind_behavior_curriculum import __version__
-
-from aind_behavior_curriculum_template import __version__ as aind_behavior_curriculum_template_version
+import aind_behavior_curriculum
+import aind_behavior_curriculum_template
 
 logger = logging.getLogger(__name__)
 
@@ -45,14 +44,14 @@ def main():
     pass
 
 
-@click.command(short_help="prints aind-behavior-curriculum version")
+@click.command(short_help="prints curriculum package version")
 def version():
-    logger.info(aind_behavior_curriculum_template_version)
+    logger.info(aind_behavior_curriculum_template.__version__)
 
 
-@click.command(short_help="prints this curriculum version")
-def curriculum_version():
-    logger.info(__version__)
+@click.command(short_help="prints the aind-behavior-curriculum package version")
+def abc_version():
+    logger.info(aind_behavior_curriculum.__version__)
 
 
 @click.command(
