@@ -2,11 +2,19 @@ from typing import Callable, Literal, TypeVar
 
 # This curriculum only has 2 stages and a single transition from stage 1 to stage 2
 # The first stage has a single policy that update suggestions while stage 1 is active
-from aind_behavior_curriculum import Metrics, Policy, Stage, TaskParameters, Trainer, create_curriculum
+from aind_behavior_curriculum import (
+    Metrics,
+    MetricsProvider,
+    Policy,
+    Stage,
+    TaskParameters,
+    Trainer,
+    create_curriculum,
+)
 from pydantic import Field
 
 from aind_behavior_curriculum_template import __version__
-from aind_behavior_curriculum_template.metrics import TemplateMetrics
+from aind_behavior_curriculum_template.metrics import TemplateMetrics, metrics_from_dataset
 from aind_behavior_curriculum_template.task_logic import TemplateParameters, TemplateTaskLogic
 
 # ============================================================
@@ -49,8 +57,6 @@ def p_set_mode_from_metric1(metrics: TemplateMetrics, task_parameters: TemplateP
 # Stage transitions
 # ============================================================
 
-StageTransition = Callable[[TMetrics], bool]
-
 
 def st_stage_a_to_stage_b(metrics: TemplateMetrics) -> bool:
     return metrics.metric1 > 1
@@ -71,12 +77,14 @@ curriculum = curriculum_class()
 s_stage_a = Stage(
     name="stage_a",
     task=TemplateTaskLogic(task_parameters=TemplateParameters(mode="foo")),
-    start_policies=[Policy(rule=x) for x in [p_set_mode_from_metric1]],
+    start_policies=[Policy(x) for x in [p_set_mode_from_metric1]],
+    metrics_provider=MetricsProvider(metrics_from_dataset),
 )
 
 s_stage_b = Stage(
     name="stage_b",
     task=TemplateTaskLogic(task_parameters=TemplateParameters(mode="bar")),
+    metrics_provider=MetricsProvider(metrics_from_dataset),
 )
 
 curriculum.add_stage_transition(s_stage_a, s_stage_b, st_stage_a_to_stage_b)

@@ -6,8 +6,9 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import click
 import aind_behavior_curriculum
+import click
+
 import aind_behavior_curriculum_template
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ def run_curriculum(args: _RunCliArgs):
     test_trainer_state = trainer.create_trainer_state(
         stage=s_stage_a,
         is_on_curriculum=True,
-        active_policies=tuple([Policy(rule=x) for x in [p_set_mode_from_metric1]]),
+        active_policies=tuple([Policy(x) for x in [p_set_mode_from_metric1]]),
     )
 
     test_metrics = TemplateMetrics(
@@ -37,6 +38,8 @@ def run_curriculum(args: _RunCliArgs):
     suggestion = trainer.evaluate(test_trainer_state, test_metrics)
     print(suggestion.model_dump_json(indent=2))
     logging.info(suggestion.model_dump_json(indent=2))
+
+    # print(test_trainer_state.model_validate_json(suggestion.model_dump_json(indent=2)).stage.metrics_provider.callable("a"))
 
 
 @click.group(name="aind-behavior-curriculum", short_help="AIND Behavior Curriculum CLI")
