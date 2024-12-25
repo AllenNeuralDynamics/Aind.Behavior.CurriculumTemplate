@@ -17,7 +17,7 @@ readme = "README.md"
 dynamic = ["version"]
 
 dependencies = [
-    "aind-behavior-curriculum @ git+https://github.com/AllenNeuralDynamics/aind-behavior-curriculum@1e52a8ab268566de6ed8b0335301b1f8e1269f31",
+    "aind-behavior-curriculum @ git+https://github.com/AllenNeuralDynamics/aind-behavior-curriculum@3ce6ea71174d60224b6a87f6c8b3520af514238c",
     "click>=8.1.7",
 ]
 
