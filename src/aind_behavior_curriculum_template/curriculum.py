@@ -7,11 +7,11 @@ from aind_behavior_curriculum import (
     MetricsProvider,
     Policy,
     Stage,
+    StageTransition,
     TaskParameters,
     Trainer,
     create_curriculum,
 )
-from pydantic import Field
 
 from aind_behavior_curriculum_template import __version__
 from aind_behavior_curriculum_template.metrics import TemplateMetrics, metrics_from_dataset
@@ -68,7 +68,7 @@ def st_stage_a_to_stage_b(metrics: TemplateMetrics) -> bool:
 
 
 class AnotherTask(TemplateTaskLogic):
-    name: Literal["AnotherTask"] = Field(default="AnotherTask")
+    name: Literal["AnotherTask"] = "AnotherTask"
 
 
 curriculum_class = create_curriculum("TemplateCurriculum", __version__, (TemplateTaskLogic, AnotherTask))
@@ -87,7 +87,7 @@ s_stage_b = Stage(
     metrics_provider=MetricsProvider(metrics_from_dataset),
 )
 
-curriculum.add_stage_transition(s_stage_a, s_stage_b, st_stage_a_to_stage_b)
+curriculum.add_stage_transition(s_stage_a, s_stage_b, StageTransition(st_stage_a_to_stage_b))
 
 
 # ==============================================================================
