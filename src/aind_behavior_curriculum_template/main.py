@@ -8,11 +8,9 @@ from typing import Optional
 
 import aind_behavior_curriculum
 import click
-from aind_behavior_curriculum import Metrics
 
 import aind_behavior_curriculum_template
 from aind_behavior_curriculum_template.curriculum import get_metrics, get_trainer_state
-from aind_behavior_curriculum_template.utils import model_from_json_file
 
 logger = logging.getLogger(__name__)
 
@@ -25,17 +23,13 @@ class CliArgs:
     mute_metrics: bool = False
     output_metrics: Optional[str | os.PathLike] = None
     output_suggestion: Optional[str | os.PathLike] = None
-    input_metrics: Optional[str | os.PathLike] = None
     demo: bool = False
 
 
 def run_curriculum(args: CliArgs):
     if not args.demo:
         trainer_state = get_trainer_state(CliArgs.input_trainer_state)
-        if args.input_metrics is None:
-            metrics = get_metrics(args.input_metrics, trainer_state)
-        else:
-            metrics = model_from_json_file(args.input_metrics, Metrics)
+        metrics = get_metrics(args.data_directory, trainer_state)
     else:
         # This is a demo mode for unittest only
         from aind_behavior_curriculum_template.curriculum import (
@@ -109,7 +103,6 @@ def abc_version():
     show_default=True,
     is_flag=True,
 )
-@click.option("--input-metrics", default=None, help="Input metrics to the Trainer", show_default=True, type=str)
 @click.option(
     "--output-metrics",
     default=None,
