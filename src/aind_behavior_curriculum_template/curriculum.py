@@ -1,4 +1,5 @@
-from typing import Callable, Literal, TypeVar
+import os
+from typing import Callable, Literal, TypeVar, Union
 
 # This curriculum only has 2 stages and a single transition from stage 1 to stage 2
 # The first stage has a single policy that update suggestions while stage 1 is active
@@ -10,6 +11,7 @@ from aind_behavior_curriculum import (
     StageTransition,
     TaskParameters,
     Trainer,
+    TrainerState,
     create_curriculum,
 )
 
@@ -17,13 +19,15 @@ from aind_behavior_curriculum_template import __version__
 from aind_behavior_curriculum_template.metrics import TemplateMetrics, metrics_from_dataset
 from aind_behavior_curriculum_template.task_logic import TemplateParameters, TemplateTaskLogic
 
+from .utils import model_from_json_file
+
 # ============================================================
 # I suggest the following naming convention to keep things clear:
 # - Policies should start with "p_" (e.g. p_identity_policy)
-# - Stage transitions should start with "st_" and should be named
-#   after the stages they transition between (e.g. st_stage1_to_stage2)
 # - Policy transitions should start with "pt_"
 # - Stages should start with "s_" (e.g. s_stage1)
+# - Stage transitions should start with "st_" and should be named
+#   after the stages they transition between (e.g. st_s_stage1_s_stage2)
 # ============================================================
 
 
@@ -58,7 +62,7 @@ def p_set_mode_from_metric1(metrics: TemplateMetrics, task_parameters: TemplateP
 # ============================================================
 
 
-def st_stage_a_to_stage_b(metrics: TemplateMetrics) -> bool:
+def st_s_stage_a_s_stage_b(metrics: TemplateMetrics) -> bool:
     return metrics.metric1 > 1
 
 
@@ -87,11 +91,28 @@ s_stage_b = Stage(
     metrics_provider=MetricsProvider(metrics_from_dataset),
 )
 
-curriculum.add_stage_transition(s_stage_a, s_stage_b, StageTransition(st_stage_a_to_stage_b))
+curriculum.add_stage_transition(s_stage_a, s_stage_b, StageTransition(st_s_stage_a_s_stage_b))
 
 
 # ==============================================================================
 # Create a Trainer that uses the curriculum to bootstrap suggestions
 # ==============================================================================
 
-trainer = Trainer(curriculum)
+TRAINER = Trainer(curriculum)
+
+
+def get_trainer_state(path: Union[str, os.PathLike], trainer: Trainer = TRAINER) -> TrainerState:
+    return model_from_json_file(path, trainer._trainer_state_factory)
+
+
+TTrainerState = TypeVar("TTrainerState", bound=TrainerState)
+
+
+def get_metrics(path: Union[str, os.PathLike], trainer_state: TTrainerState) -> Metrics:
+    stage = trainer_state.stage
+    if stage is None:
+        raise ValueError("Trainer state does not have a stage")
+    if stage.metrics_provider is None:
+        raise ValueError("Stage does not have a metrics provider")
+    metrics_provider = stage.metrics_provider
+    return metrics_provider.callable(path)

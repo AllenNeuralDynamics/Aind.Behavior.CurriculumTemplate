@@ -1,45 +1,75 @@
 from __future__ import annotations
 
-import inspect
 import logging
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 import aind_behavior_curriculum
 import click
+from aind_behavior_curriculum import Metrics
 
 import aind_behavior_curriculum_template
+from aind_behavior_curriculum_template.curriculum import get_metrics, get_trainer_state
+from aind_behavior_curriculum_template.utils import model_from_json_file
 
 logger = logging.getLogger(__name__)
 
 
-def run_curriculum(args: _RunCliArgs):
-    metric1 = len(str(args.data_directory)) / 10.0
+@dataclass
+class CliArgs:
+    data_directory: str | os.PathLike
+    input_trainer_state: str | os.PathLike
+    mute_trainer_state: bool = False
+    mute_metrics: bool = False
+    output_metrics: Optional[str | os.PathLike] = None
+    output_suggestion: Optional[str | os.PathLike] = None
+    input_metrics: Optional[str | os.PathLike] = None
+    demo: bool = False
 
-    from aind_behavior_curriculum_template.curriculum import (
-        Policy,
-        TemplateMetrics,
-        p_set_mode_from_metric1,
-        s_stage_a,
-        trainer,
-    )
 
-    test_trainer_state = trainer.create_trainer_state(
-        stage=s_stage_a,
-        is_on_curriculum=True,
-        active_policies=tuple([Policy(x) for x in [p_set_mode_from_metric1]]),
-    )
+def run_curriculum(args: CliArgs):
+    if not args.demo:
+        trainer_state = get_trainer_state(CliArgs.input_trainer_state)
+        if args.input_metrics is None:
+            metrics = get_metrics(args.input_metrics, trainer_state)
+        else:
+            metrics = model_from_json_file(args.input_metrics, Metrics)
+    else:
+        # This is a demo mode for unittest only
+        from aind_behavior_curriculum_template.curriculum import (
+            TRAINER,
+            Policy,
+            TemplateMetrics,
+            p_set_mode_from_metric1,
+            s_stage_a,
+        )
 
-    test_metrics = TemplateMetrics(
-        metric1=metric1, metric2_history=[1.0, 2.0, 3.0]
-    )  # Changing metric1 will change the suggestion
+        trainer_state = TRAINER.create_trainer_state(
+            stage=s_stage_a,
+            is_on_curriculum=True,
+            active_policies=tuple([Policy(x) for x in [p_set_mode_from_metric1]]),
+        )
+        metrics = TemplateMetrics(metric1=50, metric2_history=[1.0, 2.0, 3.0])
 
-    suggestion = trainer.evaluate(test_trainer_state, test_metrics)
-    print(suggestion.model_dump_json(indent=2))
-    logging.info(suggestion.model_dump_json(indent=2))
+    # Compute suggestion
+    suggestion = TRAINER.evaluate(trainer_state, metrics)
 
-    # print(test_trainer_state.model_validate_json(suggestion.model_dump_json(indent=2)).stage.metrics_provider.callable("a"))
+    # Outputs
+    if not args.mute_trainer_state:
+        logger.info(suggestion.model_dump_json())
+
+    if args.output_suggestion is not None:
+        with open(Path(args.output_suggestion) / "suggestion.json", "w", encoding="utf-8") as file:
+            file.write(suggestion.model_dump_json(indent=2))
+
+    if not args.mute_metrics:
+        logger.info(metrics.model_dump_json())
+
+    if args.output_metrics is not None:
+        with open(Path(args.output_metrics) / "metrics.json", "w", encoding="utf-8") as file:
+            file.write(metrics.model_dump_json(indent=2))
 
 
 @click.group(name="aind-behavior-curriculum", short_help="AIND Behavior Curriculum CLI")
@@ -47,78 +77,66 @@ def main():
     pass
 
 
-@click.command(short_help="prints curriculum package version")
+@click.command(short_help="Prints curriculum package version")
 def version():
     logger.info(aind_behavior_curriculum_template.__version__)
 
 
-@click.command(short_help="prints the aind-behavior-curriculum package version")
+@click.command(short_help="Prints the aind-behavior-curriculum package version")
 def abc_version():
     logger.info(aind_behavior_curriculum.__version__)
 
 
 @click.command(
     name="run",
-    short_help="runs the curriculum",
-    help="Run the curriculum application. A DATA-DIRECTORY input is required.",
+    short_help="Runs the curriculum",
+    help="Run the curriculum application. A DATA-DIRECTORY and INPUT-TRAINER-STATE inputs are required.",
     no_args_is_help=True,
 )
 @click.argument("data_directory")
+@click.argument("input_trainer_state")
 @click.option(
-    "--skip-upload", default=False, help="Update the suggestions at remote end-point", show_default=True, is_flag=True
+    "--mute-trainer-state",
+    default=False,
+    help="Mutes the output of the TrainerState suggestion",
+    show_default=True,
+    is_flag=True,
 )
 @click.option(
-    "--extras", help="Extra arguments to be passed to the curriculum in the form of 'k1:v1, k2:v2'", default=""
+    "--mute-metrics",
+    default=False,
+    help="Mutes the output of Metrics used to the Trainer",
+    show_default=True,
+    is_flag=True,
 )
-def run(data_directory: str | os.PathLike, skip_upload: bool, extras: str):
-    parsed = _RunCliArgs(data_directory=Path(data_directory), skip_upload=skip_upload, extras=extras)
+@click.option("--input-metrics", default=None, help="Input metrics to the Trainer", show_default=True, type=str)
+@click.option(
+    "--output-metrics",
+    default=None,
+    help="A path to save the used metrics. If not provided, the metrics will not be serialized to a file.",
+    show_default=True,
+)
+@click.option(
+    "--output-suggestion",
+    default=None,
+    help="A path to save the suggestion. If not provided, the suggestion will not be serialized to a file.",
+    show_default=True,
+)
+@click.option(
+    "--demo",
+    default=False,
+    help="Run the curriculum in demo mode. Used for unittest only!",
+    show_default=True,
+    is_flag=True,
+)
+def run(**args):
+    parsed = CliArgs(**args)
     run_curriculum(parsed)
 
 
 main.add_command(version)
 main.add_command(abc_version)
 main.add_command(run)
-
-
-@dataclass(frozen=True, slots=True)
-class _RunCliArgs:
-    data_directory: os.PathLike = field()
-    skip_upload: bool = False
-    extras: str | dict[str, str] = field(default_factory=dict)
-
-    def __post_init__(self):
-        if isinstance(self.extras, str):
-            object.__setattr__(self, "extras", self._parse_extra_args(self.extras))
-
-    @staticmethod
-    def _parse_extra_args(args: str) -> dict[str, str]:
-        extra_kwargs: dict[str, str] = {}
-        candidate_args = args.split(",")
-        if len(args) == 0:
-            return extra_kwargs
-        for arg in candidate_args:
-            try:
-                arg = arg.replace(" ", "")
-                key, value = arg.split(":")
-                extra_kwargs[key] = value
-            except ValueError as e:
-                logger.error("Invalid extra argument: %s. Parameters must be in the form of 'k1:v1, k2:v2'", arg)
-                raise e
-        return extra_kwargs
-
-    @classmethod
-    def from_dict(cls, env):
-        return cls(
-            **{
-                cls._sanitize_key(k): v
-                for k, v in env.items()
-                if cls._sanitize_key(k) in inspect.signature(cls).parameters
-            }
-        )
-
-    @staticmethod
-    def _sanitize_key(key: str) -> str:
-        return key.replace("-", "_")
 
 
 if __name__ == "__main__":
