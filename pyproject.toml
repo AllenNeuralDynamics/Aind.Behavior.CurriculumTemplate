@@ -17,7 +17,7 @@ readme = "README.md"
 dynamic = ["version"]
 
 dependencies = [
-    "aind-behavior-curriculum @ git+https://github.com/AllenNeuralDynamics/aind-behavior-curriculum@v0.0.30",
+    "aind-behavior-curriculum",
     "click",
 ]
 
@@ -56,6 +56,3 @@ pydocstyle = { convention = 'google' }
 [tool.codespell]
 skip = '.git,*.pdf,*.svg,./docs/_build,uv.lock'
 ignore-words-list = 'nd'
-
-[tool.uv.sources]
-aind-behavior-curriculum = { git = "https://github.com/AllenNeuralDynamics/aind-behavior-curriculum" }
