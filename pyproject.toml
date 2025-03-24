@@ -17,6 +17,8 @@ readme = "README.md"
 dynamic = ["version"]
 
 dependencies = [
+    "pydantic",
+    "pydantic-settings",
     "aind-behavior-curriculum",
     "click",
 ]
