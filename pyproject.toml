@@ -35,9 +35,6 @@ dev = [
     "codespell"
 ]
 
-[project.scripts]
-curriculum = "aind_behavior_curriculum_template.main:main"
-
 [tool.setuptools.packages.find]
 where = ["src"]
 
