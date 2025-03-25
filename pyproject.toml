@@ -17,6 +17,8 @@ readme = "README.md"
 dynamic = ["version"]
 
 dependencies = [
+    "pydantic",
+    "pydantic-settings",
     "aind-behavior-curriculum",
     "click",
 ]
@@ -32,9 +34,6 @@ dev = [
     "ruff",
     "codespell"
 ]
-
-[project.scripts]
-curriculum = "aind_behavior_curriculum_template.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
