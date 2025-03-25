@@ -1,17 +1,14 @@
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 
 import aind_behavior_curriculum
 from pydantic_settings import CliApp
 
 import aind_behavior_curriculum_template
+from aind_behavior_curriculum_template import logger
 from aind_behavior_curriculum_template.curriculum import get_metrics, get_trainer_state
-
-from .utils import AppCliArgs, CurriculumCliArgs
-
-logger = logging.getLogger(__name__)
+from aind_behavior_curriculum_template.utils import CurriculumAppCliArgs, CurriculumCliArgs, CurriculumCliOutput
 
 
 def run_curriculum(args: CurriculumCliArgs):
@@ -38,16 +35,18 @@ def run_curriculum(args: CurriculumCliArgs):
     # Compute suggestion
     suggestion = TRAINER.evaluate(trainer_state, metrics)
 
-    # Outputs
-    if not args.mute_trainer_state:
-        logger.info(suggestion.model_dump_json())
+    output = CurriculumCliOutput(
+        trainer_state=suggestion,
+        metrics=metrics,
+        abc_version=aind_behavior_curriculum.__version__,
+        version=aind_behavior_curriculum_template.__version__,
+    )
+    if not args.mute_output:
+        logger.info(output.model_dump_json())
 
     if args.output_suggestion is not None:
         with open(Path(args.output_suggestion) / "suggestion.json", "w", encoding="utf-8") as file:
             file.write(suggestion.model_dump_json(indent=2))
-
-    if not args.mute_metrics:
-        logger.info(metrics.model_dump_json())
 
     if args.output_metrics is not None:
         with open(Path(args.output_metrics) / "metrics.json", "w", encoding="utf-8") as file:
@@ -55,7 +54,7 @@ def run_curriculum(args: CurriculumCliArgs):
 
 
 def main():
-    args = CliApp.run(AppCliArgs)
+    args = CliApp.run(CurriculumAppCliArgs)
     if args.run is not None:
         run_curriculum(args.run)
     if args.abc_version:

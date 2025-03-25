@@ -2,6 +2,7 @@ import os
 import pathlib
 import typing
 
+import aind_behavior_curriculum
 from pydantic import BaseModel, Field, RootModel
 from pydantic_settings import (
     BaseSettings,
@@ -11,6 +12,8 @@ from pydantic_settings import (
     SettingsConfigDict,
     YamlConfigSettingsSource,
 )
+
+from . import __version__
 
 TModel = typing.TypeVar("TModel", bound=BaseModel)
 
@@ -25,12 +28,7 @@ class CurriculumCliArgs(BaseSettings):
 
     data_directory: os.PathLike = Field(description="Path to the session data directory.")
     input_trainer_state: os.PathLike = Field(description="Path to a deserializable trainer state.")
-    mute_trainer_state: CliImplicitFlag[bool] = Field(
-        default=False, description="Disables the output of the TrainerState suggestion"
-    )
-    mute_metrics: CliImplicitFlag[bool] = Field(
-        default=False, description="Disables the output of the calculated metrics"
-    )
+    mute_output: CliImplicitFlag[bool] = Field(default=False, description="Mute the output.")
     output_metrics: typing.Optional[os.PathLike] = Field(
         default=None,
         description="A path to save the used metrics. If not provided, the metrics will not be serialized to a file.",
@@ -69,7 +67,20 @@ class _AnyRoot(RootModel):
     root: typing.Any
 
 
-class AppCliArgs(BaseSettings, cli_prog_name="curriculum", cli_kebab_case=True):
+class CurriculumAppCliArgs(BaseSettings, cli_prog_name="curriculum", cli_kebab_case=True):
     run: CliSubCommand[CurriculumCliArgs]
     version: CliSubCommand[_AnyRoot]
     abc_version: CliSubCommand[_AnyRoot]
+
+
+TTrainerState = typing.TypeVar("TTrainerState", bound=aind_behavior_curriculum.TrainerState)
+TMetrics = typing.TypeVar("TMetrics", bound=aind_behavior_curriculum.Metrics)
+
+
+class CurriculumCliOutput(BaseModel, typing.Generic[TTrainerState, TMetrics]):
+    trainer_state: typing.Optional[TTrainerState] = Field(default=None, description="The TrainerState suggestion.")
+    metrics: typing.Optional[TMetrics] = Field(default=None, description="The calculated metrics.")
+    version: str = Field(default=__version__, description="The version of the curriculum.")
+    abc_version: str = Field(
+        default=aind_behavior_curriculum.__version__, description="The version of the curriculum library."
+    )
